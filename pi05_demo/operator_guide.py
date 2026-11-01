@@ -18,7 +18,7 @@ def format_alignment(data):
         text+="\nEnter 停止 → s 正常 / f 失败 / a 放弃；q 退出。"
         if data.get('episode_keys') == 'resdq':
             text=text.replace('按 Enter', '按 r').replace('Enter 停止 → s 正常 / f 失败 / a 放弃；q 退出。',
-                'e 结束本条并回位 → s 保存成功示范 / d 丢弃；q 退出，未确认片段保留为 aborted。')
+                'e 结束本条并回位 → s 保存成功示范 / d 丢弃；q 退出，未确认片段直接丢弃，不保存 H5。')
         return text
     errors = data.get("joint_error_degrees")
     width_error = data.get("gripper_error_mm")
@@ -117,8 +117,8 @@ class OperatorGuide:
         }
         if data.get('episode_keys') == 'resdq':
             messages.update(standby="待机：按 r 开始新片段；q 退出。",
-                            recording="正在跟随并录制！按 e 立即结束本条并回默认位置；回位过程不录制。q 直接退出，当前段记为 aborted。")
-        messages['review'] = "已回默认位置，本条已结束。s 保存成功示范 / d 丢弃；处理后按 r 开始下一条。q 退出并将本条保留为 aborted。"
+                            recording="正在跟随并录制！按 e 立即结束本条并回默认位置；回位过程不录制。q 直接退出，当前未保存片段直接丢弃。")
+        messages['review'] = "已回默认位置，本条已结束。s 保存成功示范 / d 丢弃；处理后按 r 开始下一条。q 退出并丢弃未保存的本条。"
         if event == 'homing' and data.get('review_after_home'):
             messages['homing'] = "本条已停止录制，正在回默认位置；完成后按 s 保存或 d 丢弃。q 可直接退出。"
         if event == 'discarded':

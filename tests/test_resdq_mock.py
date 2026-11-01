@@ -8,7 +8,7 @@ from pi05_demo.session import CollectionSession
 from test_collection_session import mock_bridge,ROOT
 
 class ResdqMockTests(unittest.TestCase):
-    def test_home_open_review_save_discard_and_aborted_exit(self):
+    def test_home_open_review_save_discard_and_unsaved_exit(self):
         cfg=json.loads((ROOT/'configs/latency/responsive_recording/collection.trial.json').read_text())
         cfg['episode_keys']='resdq'
         calibration=json.loads((ROOT/'configs/latency/responsive_recording/bridge.trial.json').read_text())
@@ -37,7 +37,7 @@ class ResdqMockTests(unittest.TestCase):
                     with h5py.File(p) as f:
                         outcomes.append(str(f.attrs['outcome']))
                         self.assertNotIn('episode_keys',json.loads(f.attrs['config_json']))
-                self.assertCountEqual(outcomes,['success','aborted'])
-                self.assertEqual(len(list(Path(root).rglob('*.h5'))),2)
+                self.assertCountEqual(outcomes,['success'])
+                self.assertEqual(len(list(Path(root).rglob('*.h5'))),1)
                 self.assertEqual(list(Path(root).glob('*.inprogress')),[])
             finally:s.close()

@@ -28,7 +28,7 @@ ssh -N -L 8767:127.0.0.1:8767 4090-v6
 
 如果提示端口占用，先检查已有工作台是否已启动；可复用当前页面。日志在运行副本 `outputs/review/server.log`，启动进程 PID 在 `outputs/review/server.pid`。页面每 5 秒自动刷新录制清单，新增 H5 无需重启；不会覆盖未保存的剪辑或切走当前正在看的录制。
 
-原始 H5 现在直接位于 `/home/heinrich/robolab-control-system/data/raw/`，不用逐个进入 session 文件夹。2026-11-01 整理了 25 个 H5（19 个 success、6 个 aborted），逐文件核验 SHA-256，保留 H5 内容与 session 属性，同步迁移计数账本及保存的筛选方案路径。整理清单及账本备份位于 `/home/heinrich/robolab-control-system/reports/raw_flatten_20261101/`。新采集也直接保存到该层。
+原始 H5 现在直接位于 `/home/heinrich/robolab-control-system/data/raw/`，不用逐个进入 session 文件夹。2026-11-01 整理了 25 个 H5（19 个 success、6 个 aborted），逐文件核验 SHA-256，保留 H5 内容与 session 属性，同步迁移计数账本及保存的筛选方案路径。整理清单及账本备份位于 `/home/heinrich/robolab-control-system/reports/raw_flatten_20261101/`。新采集也直接保存到该层。随后按“只保留 s 保存”的要求移除了其中 6 个 aborted 文件，当前仅保留 19 条成功录制；删除清单（只有文件名和元数据，没有 H5 备份）位于 `reports/save_only_20261101/removed_unsaved.json`。
 
 筛选完成后转换：
 

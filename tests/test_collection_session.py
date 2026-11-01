@@ -318,7 +318,7 @@ class CollectionSessionTests(unittest.TestCase):
                 tick(["f"])
                 until(lambda: session.phase == "standby")
                 files = list(Path(output).glob("*.h5"))
-                self.assertEqual(len(files), 2)
+                self.assertEqual(len(files), 1)
                 self.assertEqual(sum(e == "homing" for e, _ in events), 1)
                 tick(["toggle"])
                 self.assertEqual(session.phase, "recording")
@@ -329,17 +329,16 @@ class CollectionSessionTests(unittest.TestCase):
                     session.tick()
                 session.close("leader moved after takeover gate")
                 files = list(Path(output).glob("*.h5"))
-                self.assertEqual(len(files), 3)
+                self.assertEqual(len(files), 1)
                 # Audit files after shutdown: blocking inspection in this test's
                 # control thread must not starve its intentional 250 ms watchdog.
                 audited = [inspect_episode(f, allow_mock=True) for f in files]
-                self.assertEqual({x["outcome"] for x in audited}, {"success", "failure", "aborted"})
+                self.assertEqual({x["outcome"] for x in audited}, {"success"})
                 self.assertTrue(all(x["session"] == "mock_session" for x in audited))
                 with h5py.File(first) as f:
                     self.assertEqual(f.attrs["outcome"], "success")
                     self.assertEqual(len(f["q"]), count)
-                aborted = [x for x in audited if x["outcome"] == "aborted"]
-                self.assertEqual(aborted[0]["frames"], 0)
+                self.assertEqual(list(Path(output).glob('*.inprogress')), [])
             finally:
                 session.close()
 

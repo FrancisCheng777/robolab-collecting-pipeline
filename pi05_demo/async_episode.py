@@ -75,6 +75,10 @@ class AsyncEpisodeWriter:
             self._finish = (outcome, reason)
             self._wake.set()
 
+    @property
+    def finished(self):
+        return self._done.is_set()
+
     def poll_finished(self):
         self.check()
         return self._path if self._done.is_set() else None
@@ -93,3 +97,5 @@ class AsyncEpisodeWriter:
         if not self._done.is_set():
             self._cancel.set()
             self._wake.set()
+            # Called after the robot has stopped: allow worker-owned H5 cleanup.
+            self._thread.join(timeout=5.)

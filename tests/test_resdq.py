@@ -53,8 +53,8 @@ class RecordingKeysTests(unittest.TestCase):
                 self.assertTrue(any(e=='discarded' for e,_ in events))
                 self.assertFalse(s.tick(['q']));self.assertTrue(s.bridge.closed)
             finally:s.close()
-    def test_q_preserves_unconfirmed_as_aborted(self):
+    def test_q_discards_unconfirmed_data(self):
         with tempfile.TemporaryDirectory() as root, patch('time.monotonic',return_value=100.) as clock:
             s,_=self.make(root);s.tick(['r']);s.tick();s.tick(['q'])
             self.assertTrue(s.closed)
-            self.assertEqual(inspect_episode(next(Path(root).glob('*.h5')),allow_mock=True)['outcome'],'aborted')
+            self.assertEqual(list(Path(root).glob('*.h5*')), [])

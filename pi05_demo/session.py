@@ -258,7 +258,8 @@ class CollectionSession:
             self.announce('control_timing', samples=len(self.control_intervals),
                           interval_ms_p50_p95_p99=np.percentile(self.control_intervals, [50, 95, 99]).tolist(),
                           recording_queue_peak=getattr(self.writer, 'high_watermark', 0))
-        if self.discard_requested:
+        self.discard_requested = self.discard_requested or path is None
+        if self.discard_requested and path is not None:
             from pathlib import Path
             Path(path).unlink()  # Explicit d discards only this finalized episode.
         collection_metadata = getattr(self.writer, "collection_metadata", {})
@@ -266,7 +267,7 @@ class CollectionSession:
         self.completed_episodes += 1
         self.phase = "standby"
         self.pending_outcome = None
-        self.announce("discarded" if self.discard_requested else "saved", episode=str(path), outcome=outcome, frames=count, **collection_metadata)
+        self.announce("discarded" if self.discard_requested else "saved", episode=str(path) if path is not None else None, outcome=outcome, frames=count, **collection_metadata)
         self.discard_requested = False
         if not self.closed:
             self.announce("standby", episode_keys="resdq" if self.review_keys else "legacy", message="r starts the next trial." if self.review_keys else "F2/Enter starts the next trial.")
@@ -319,7 +320,7 @@ class CollectionSession:
         if self.phase == 'saving':
             self.bridge.hold(state)
             path = self.writer.poll_finished()
-            if path is not None:
+            if path is not None or self.writer.finished:
                 self._saved(path, self.saving_outcome)
             elif time.monotonic() - self.saving_started > 5:
                 raise TimeoutError('episode storage failed to drain within 5 seconds')
@@ -389,7 +390,7 @@ class CollectionSession:
                 if self.phase == "label" and self.pending_outcome is not None:
                     self._finish(self.pending_outcome)
                 else:
-                    self.announce(self.phase, episode_keys="resdq" if self.review_keys else "legacy", message=("s=save success; d=delete; q=exit as aborted." if self.phase == "review" else "r starts recording." if self.review_keys else "s=success f=failure a=discard; arm is held."
+                    self.announce(self.phase, episode_keys="resdq" if self.review_keys else "legacy", message=("s=save success; d=delete; q=exit and discard unsaved data." if self.phase == "review" else "r starts recording." if self.review_keys else "s=success f=failure a=discard; arm is held."
                                   if self.phase == "label" else "Align GELLO; F2/Enter starts recording."))
         elif self.phase == "init":
             if self.auto_home_pending and time.monotonic() - self.startup_wait_started > 10:
@@ -441,14 +442,14 @@ class CollectionSession:
                 self.control_intervals = []
                 if self.recording_enabled:
                     self.writer = writer_type(self.output, mock=self.mock, task=self.config["task"],
-                        session=self.session, collector=self.collector, config={**{k:v for k,v in self.config.items() if k != "episode_keys"},
+                        session=self.session, collector=self.collector, save_success_only=True, config={**{k:v for k,v in self.config.items() if k != "episode_keys"},
                                 "bridge_calibration": state["calibration"]})
                 else:
                     self.writer = TeleopCounter()
                 self.critical = self.intervention = False
                 self.first_frame = not self.robolab
                 self.phase = "recording"
-                self.announce("recording", teleop_only=not self.recording_enabled, episode_keys="resdq" if self.review_keys else "legacy", message="e: end and home; then s: save / d: delete; q: exit as aborted." if self.review_keys else "F2/Enter: stop following." if not self.recording_enabled else "F2/Enter: stop then label; s/f/a: stop with label.")
+                self.announce("recording", teleop_only=not self.recording_enabled, episode_keys="resdq" if self.review_keys else "legacy", message="e: end and home; then s: save / d: delete; q: exit and discard unsaved data." if self.review_keys else "F2/Enter: stop following." if not self.recording_enabled else "F2/Enter: stop then label; s/f/a: stop with label.")
         return True
 
     def close(self, reason="session closed"):

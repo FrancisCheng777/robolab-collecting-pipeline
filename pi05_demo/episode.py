@@ -13,7 +13,8 @@ from .vision import camera_views, episode_views
 
 SCHEMA="pi05_plug_demo/1"
 class EpisodeWriter:
-    def __init__(self,root,*,mock,task,session,config,collector=None):
+    def __init__(self,root,*,mock,task,session,config,collector=None,save_success_only=False):
+        self.save_success_only = save_success_only
         self.collector = collector
         self.collection_metadata = {}
         if collector:
@@ -107,6 +108,9 @@ class EpisodeWriter:
     def finish(self,outcome,reason=""):
         if outcome not in ("success","failure","aborted"):
             raise ValueError("explicit episode outcome required")
+        if self.save_success_only and outcome != 'success':
+            self.close_incomplete()
+            return None
         if self.count==0 and outcome!="aborted":
             raise ValueError("empty episode cannot succeed/fail")
         self.f.attrs.update(outcome=outcome,success=int(outcome=="success"),
@@ -131,6 +135,7 @@ class EpisodeWriter:
         return self.final
     def close_incomplete(self):
         if self.f.id.valid:self.f.close()
+        if self.save_success_only:self.partial.unlink(missing_ok=True)
 
 def inspect_episode(path,*,allow_mock=False):
     with h5py.File(path,"r") as f:
