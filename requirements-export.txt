@@ -1,0 +1,8 @@
+# Observed export environment; install compatible torch/torchvision separately.
+-e .
+lerobot==0.6.1
+numpy==2.2.6
+h5py==3.13.0
+Pillow==11.2.1
+datasets==4.8.5
+av==15.1.0
