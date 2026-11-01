@@ -366,17 +366,28 @@ if (typeof document !== "undefined") {
     if (event.code === "ArrowLeft") { event.preventDefault(); seek(state.index - 1); }
     if (event.code === "ArrowRight") { event.preventDefault(); seek(state.index + 1); }
   });
+  async function refreshRecordings() {
+    const data = await api("/api/recordings");
+    state.entries = data.recordings; state.config = data.config;
+    const successes = data.recordings.filter(e => e.outcome === "success").length;
+    $("selection").textContent = `${data.recordings.length} 个 H5 · ${successes} 条成功 · ${data.recordings.filter(e => e.valid).length} 条可播放`;
+    renderList();
+    if (!state.name) {
+      const first = data.recordings.find(e => e.valid && e.outcome === "success") || data.recordings.find(e => e.valid);
+      if (first) { error(""); await selectRecording(first.name); }
+    }
+  }
   async function init() {
     setupCharts();
     try {
-      const data = await api("/api/recordings"); state.entries = data.recordings; state.config = data.config;
-      $("selection").textContent = `${data.recordings.filter(e => e.valid).length} 有效 / ${data.recordings.length} 条 · 递归扫描 session`;
-      $("output").textContent = data.config.output;
+      await refreshRecordings();
+      $("output").textContent = state.config.output;
       try { const player = await api("/api/player"); state.speed = player.speed; $("speed").value = String(player.speed); } catch (_) { /* test app defaults to 1x */ }
       await reloadPlan();
-      const first = data.recordings.find(e => e.valid);
-      if (first) await selectRecording(first.name); else error("没有可播放的有效录制，请检查输入目录和起始时间。");
-      state.poll = setInterval(pollExport, 1500); requestAnimationFrame(tick);
+      if (!state.name) error("暂无可播放录制；保存新的 H5 后会自动出现在这里。");
+      state.poll = setInterval(pollExport, 1500);
+      setInterval(() => refreshRecordings().catch(exc => error("刷新录制列表失败：" + exc.message)), 5000);
+      requestAnimationFrame(tick);
     } catch (exc) { error("初始化失败：" + exc.message); }
   }
   init();

@@ -104,7 +104,7 @@ zyp 晚上第一条标题为 `2026-11-01 · zyp · 第 11 条 · 总第 31 条`�
 
 每段处理完后按 `r` 继续。`scripts/collect_one.sh` 是同一连续流程的兼容入口。
 
-文件写到 `data/raw/collection_<时间>/*.h5`，不会直接平铺在 `data/raw/`。检查及日志写到 `reports/collection/<session>/`。成功标签来自操作者；应同时检查图像、时间完整性和任务结果。
+文件直接平铺在 `data/raw/*.h5`，打开该目录即可看到所有录制，不再逐层进入采集文件夹。每个 H5 内仍保留独立的 `session` 属性，训练/验证划分不受影响；采集结束检查也只检查本轮 session。检查及日志写到 `reports/collection/<session>/`。成功标签来自操作者；应同时检查图像、时间完整性和任务结果。
 
 纯遥操作：`./scripts/try_latency.sh responsive --execute --teleop-only`，保留旧的遥操作按键，不启用相机或录制。
 
@@ -118,7 +118,7 @@ python3 -m venv .venv-review
 ./scripts/review.sh --input data/raw
 ```
 
-打开 <http://127.0.0.1:8767>。递归扫描 session 子目录，跳过 `.inprogress`；新增录制后重启工作台以重新扫描。`--input` 可指定一个 session，`--clips` 指定方案 JSON，`--output` 指定筛选 H5 输出位置。不同数据根目录应使用各自的方案与输出位置。`REVIEW_PYTHON=/path/to/python` 可复用已有离线环境。
+打开 <http://127.0.0.1:8767> 即列出全部 H5 并打开第一条可播放的成功录制。列表每 5 秒自动发现新增文件，不需要重启；兼容历史子目录并跳过 `.inprogress`。侧栏分别显示 H5 总数、成功数、可播放数，避免把中止或空录制误认为数据丢失。`--input` 指定数据目录，`--clips` 指定方案 JSON，`--output` 指定筛选 H5 输出位置。不同数据根目录应使用各自的方案与输出位置。`REVIEW_PYTHON=/path/to/python` 可复用已有离线环境。
 
 1. 暂停并设置 Start/End，点击“添加删除区间”。首尾帧都剔除；原始时间轴仍完整可看。
 2. “保存方案”只保存 JSON；“导出筛选 H5”才生成连续保留片段。每段为独立 H5，保留 session、成功标签、mock 标记、全部相机与时间戳；不会跨剔除区间拼接动作。
@@ -146,10 +146,10 @@ python3 -m venv .venv-lerobot
 # 若使用其他环境：export LEROBOT_PYTHON=/path/to/python
 ```
 
-单 session 试导出：
+筛选结果试导出（仅检查链路）：
 
 ```bash
-./scripts/export.sh --input data/raw/collection_<时间> --output outputs/checkout_v1 --checkout
+./scripts/export.sh --input outputs/review/selected --output outputs/checkout_v1 --checkout
 ```
 
 `--checkout` 只做链路检查，不是正式训练发布。正式导出需要至少一个独立 session 作为验证集。当前 exporter 只读取输入目录第一层的 `*.h5`；先将选中的 session 文件汇集到一个独立目录（可使用符号链接），再执行：

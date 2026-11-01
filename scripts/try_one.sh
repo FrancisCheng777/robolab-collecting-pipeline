@@ -16,7 +16,7 @@ TRIAL_DATA="${PI05_TRIAL_DATA_ROOT:-$TRIAL_ROOT/data/trial_raw_20261030}/$TRIAL_
 if [[ "$TRIAL_CONTINUOUS" == 1 ]]; then
   TRIAL_SESSION="collection_$(TZ=Asia/Taipei date +%Y%m%d_%H%M%S)"
   TRIAL_RUN="$TRIAL_ROOT/reports/collection/$TRIAL_SESSION"
-  TRIAL_DATA="$TRIAL_ROOT/data/raw/$TRIAL_SESSION"
+  TRIAL_DATA="$TRIAL_ROOT/data/raw"
 fi
 TRIAL_SOCKET="${PI05_TRIAL_SOCKET:-/tmp/pi05-robolab-trial-20261030.sock}"
 exec 9>/tmp/pi05-robolab-trial-20261030.lock
@@ -172,7 +172,7 @@ if [[ "$TRIAL_RESULT" != 0 ]]; then
 fi
 if compgen -G "$TRIAL_DATA/*.h5" >/dev/null; then
   if [[ "$TRIAL_CONTINUOUS" == 1 ]]; then
-    .venv/bin/python scripts/check_session.py --input "$TRIAL_DATA" --report "$TRIAL_RUN/session_check.json"
+    .venv/bin/python scripts/check_session.py --input "$TRIAL_DATA" --session "$TRIAL_SESSION" --report "$TRIAL_RUN/session_check.json"
   else
     if [[ "${PI05_LATENCY_TRIAL:-0}" == 1 && "${PI05_EXPORT_CHECKOUT:-0}" != 1 ]]; then
       .venv/bin/python scripts/check_session.py --input "$TRIAL_DATA" --report "$TRIAL_RUN/session_check.json"

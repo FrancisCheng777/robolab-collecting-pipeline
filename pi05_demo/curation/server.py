@@ -37,13 +37,30 @@ class ReviewService:
         self.clips = clips
         self.lock = threading.RLock()
         self.plan = load_plan(clips)
-        self.entries = scan(config, self.plan)
         self.paths = {source_name(p, config): p for p in discover(config)}
+        self.entries = scan(config, self.plan, self.paths.values())
+        self.source_versions = {name: fingerprint(p) for name, p in self.paths.items()}
         unknown = set(self.plan["recordings"]) - self.paths.keys()
         if unknown:
             raise ValueError(f"Clip plan references missing/unselected sources: {sorted(unknown)}")
         self.job = {"phase": "idle"}
         self.worker = None
+
+    def refresh_sources(self):
+        """Notice newly finalized H5 files without replacing saved edit decisions."""
+        with self.lock:
+            paths, versions = {}, {}
+            for path in discover(self.config):
+                try:
+                    version = fingerprint(path)
+                except FileNotFoundError:
+                    continue  # An explicitly discarded episode can vanish here.
+                name = source_name(path, self.config)
+                paths[name], versions[name] = path, version
+            if versions != self.source_versions:
+                self.entries = scan(self.config, self.plan, paths.values())
+                self.paths, self.source_versions = paths, versions
+                self.recording.cache_clear()
 
     @lru_cache(maxsize=2)
     def recording(self, name: str) -> Recording:
@@ -131,6 +148,7 @@ def create_app(config: Config, clips: Path) -> FastAPI:
 
     @app.get("/api/recordings")
     def recordings():
+        service.refresh_sources()
         with service.lock:
             entries = copy.deepcopy(service.entries)
             plan = copy.deepcopy(service.plan)

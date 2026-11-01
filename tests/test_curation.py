@@ -52,6 +52,17 @@ class CurationTests(unittest.TestCase):
             self.assertEqual(set(frame.json()['images']), {'wrist'})
             self.assertEqual(client.get(f'/api/recordings/{self.source.name}/frame?index=16').status_code, 400)
 
+    def test_new_recording_appears_without_restarting_review_or_losing_plan(self):
+        with TestClient(create_app(self.config, self.root/'clips.json')) as client:
+            revision = client.get('/api/plan').json()['revision']
+            plan = {'version': 1, 'recordings': {self.source.name: {'drop': True}}}
+            saved = client.put('/api/plan', json={'plan': plan, 'base_revision': revision}).json()
+            newer = episode(self.raw, collector={'name': 'zyp', 'counter_root': str(self.raw)})
+            entries = client.get('/api/recordings').json()['recordings']
+            self.assertEqual({x['name'] for x in entries}, {self.source.name, newer.name})
+            self.assertEqual(client.get('/api/plan').json(), saved)
+            self.assertEqual(client.get(f'/api/recordings/{newer.name}/frame').status_code, 200)
+
     def test_middle_cut_splits_native_episodes_without_changing_source(self):
         before = hashlib.sha256(self.source.read_bytes()).hexdigest()
         plan = {'version': 1, 'recordings': {self.source.name: {

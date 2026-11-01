@@ -13,11 +13,16 @@ from pi05_demo.contract import DATASET_CONTRACT_ID
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--input', type=Path, required=True)
 parser.add_argument('--report', type=Path, required=True)
+parser.add_argument('--session', help='Audit only this session when raw files share one directory')
 args = parser.parse_args()
 results = []
 for path in sorted(args.input.glob('*.h5')):
     item = {'path': str(path), 'passed': False}
     try:
+        if args.session:
+            with h5py.File(path, 'r') as episode:
+                if episode.attrs.get('session') != args.session:
+                    continue
         item.update(inspect_episode(path, allow_mock=False))
         with h5py.File(path, 'r') as episode:
             item['timing'] = audit_timing(episode, 15, allow_resampling=episode.attrs.get('schema') == 'pi05_plug_demo/2')

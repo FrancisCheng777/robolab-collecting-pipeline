@@ -65,6 +65,10 @@ class CurationBrowserTests(unittest.TestCase):
                         report = json.loads((root/'selected/export_report.json').read_text())
                         self.assertEqual(report['total_episodes'], 2)
                         self.assertEqual(report['total_frames'], 12)
+                        page.fill('#search', '')
+                        episode(root/'raw')
+                        page.wait_for_function("document.querySelectorAll('#recordings button').length === 2", timeout=12000)
+                        self.assertIn('zyp · 第 1 条 · 总第 1 条', page.locator('#title').inner_text())
                         self.assertEqual(errors, [])
                         browser.close()
                 finally:

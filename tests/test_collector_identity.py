@@ -144,6 +144,7 @@ class CollectorIdentityTests(unittest.TestCase):
             self.assertIn('zyp · 第 1 条 · 总第 1 条', output)
             self.assertEqual(list(root.rglob('desk-before.json')), [])
             self.assertEqual(list(root.rglob('*.h5')), [])
+            self.assertEqual(list((root/'data/raw').glob('collection_*')), [])
 
     def test_async_storage_retains_numbered_metadata(self):
         from pi05_demo.async_episode import AsyncEpisodeWriter

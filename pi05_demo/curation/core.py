@@ -219,11 +219,11 @@ class Recording:
                     fps=self.fps, **self.collection_metadata)
 
 
-def scan(config, plan=None):
+def scan(config, plan=None, paths=None):
     entries = []
-    for path in discover(config):
+    for path in (discover(config) if paths is None else paths):
         try:
             entries.append(Recording(path, config).summary(plan))
         except (OSError, ValueError, KeyError, TypeError, OverflowError) as exc:
             entries.append(dict(name=source_name(path, config), valid=False, error=str(exc)))
-    return entries
+    return sorted(entries, key=lambda e: (e.get('collection_total_index', 0), e['name']))
