@@ -18,9 +18,11 @@ class EpisodeWriter:
         self.collection_metadata = {}
         if collector:
             from .collector import Registry, normalize_name, collection_date
-            self.collector = {**collector, 'name': normalize_name(collector['name'])}
+            self.collector = {**collector, 'name': normalize_name(collector['name']),
+                              'task_id': normalize_name(collector.get('task_id', 'rlt'))}
             self.registry = Registry(collector['counter_root'], mock=mock)
-            self.collection_metadata = dict(collector_name=self.collector['name'], collection_date=collection_date())
+            self.collection_metadata = dict(collector_name=self.collector['name'], collection_date=collection_date(),
+                                            collection_task_id=self.collector['task_id'])
         self.views=camera_views(config.get("cameras"))
         root=Path(root);root.mkdir(parents=True,exist_ok=True)
         self.final=root/f"episode_{time.time_ns()}_{uuid.uuid4().hex[:8]}.h5"
@@ -113,10 +115,17 @@ class EpisodeWriter:
         def publish(metadata):
             self.f.attrs.update(metadata)
             self.f.flush();self.f.close()
-            os.replace(self.partial,self.final)
+            if 'collection_filename' in metadata:
+                target = self.final.with_name(metadata['collection_filename'])
+                # Atomic, same-filesystem publication that refuses to overwrite.
+                os.link(self.partial, target)
+                self.partial.unlink()
+                self.final = target
+            else:
+                os.replace(self.partial,self.final)
         if outcome == 'success' and self.collector:
             self.collection_metadata = self.registry.save_success(self.final, self.collector['name'],
-                self.collection_metadata['collection_date'], publish)
+                self.collection_metadata['collection_date'], publish, task_id=self.collector['task_id'])
         else:
             publish(self.collection_metadata)
         return self.final

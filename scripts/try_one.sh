@@ -27,7 +27,8 @@ export PYTHONUNBUFFERED=1
 exec > >(tee -a "$TRIAL_RUN/collection.log") 2>&1
 TRIAL_IDENTITY_ARGS=()
 if [[ "${PI05_TELEOP_ONLY:-0}" != 1 ]]; then
-  .venv/bin/python -m pi05_demo.collector --root "$TRIAL_ROOT/data/raw" --identity "$TRIAL_RUN/collector.json"
+  .venv/bin/python -m pi05_demo.collector --root "$TRIAL_ROOT/data/raw" --identity "$TRIAL_RUN/collector.json" \
+    --task-id "${PI05_COLLECTION_TASK_ID:-rlt}"
   # q exits the identity prompt without ever reaching device startup.
   [[ -f "$TRIAL_RUN/collector.json" ]] || exit 0
   TRIAL_IDENTITY_ARGS=(--collector-file "$TRIAL_RUN/collector.json")

@@ -69,7 +69,15 @@ export FRANKA_ECHO=/path/to/libfranka/build/examples/echo_robot_state
 ./scripts/collect_session.sh
 ```
 
-首次启动确认 Enter **之前**会先询问采集者姓名，例如 `zyp`。日期自动按 Asia/Taipei 填入，无需输入；看到姓名、已保存数量和下一条编号后，再按原来的 Enter 检测设备并回位。输入姓名时键入 `q` 可退出，纯遥操作及 `--inspect` 不询问姓名。
+首次启动确认 Enter **之前**会先询问采集者姓名，例如 `zyp`。日期自动按 Asia/Taipei 填入，无需输入；看到姓名、已保存数量和下一条文件名后，再按原来的 Enter 检测设备并回位。输入姓名时键入 `q` 可退出，纯遥操作及 `--inspect` 不询问姓名。
+
+任务短名默认固定为 `rlt`，在一次启动时指定，整轮采集沿用。换任务短名可以这样启动（仅设置文件名前缀，不改变机器人参数或训练用自然语言 task）：
+
+```bash
+PI05_COLLECTION_TASK_ID=plug ./scripts/collect_session.sh
+```
+
+**成功保存后的实际文件名**为 `{任务短名}_{月日}_{采集者}_{个人编号}_total{总编号}.h5`。例如 10 月 31 日 zyp 的第 11 条、所有采集者合计第 31 条：`rlt_1031_zyp_11_total31.h5`。完整年份同时存入 H5 元数据。未确认或失败记录保留唯一临时 ID 命名，不占成功序号；历史文件不改名。
 
 个人编号和总编号都跨 session、跨天累计，日期单独显示。示例：
 
@@ -83,7 +91,7 @@ zyp 晚上第一条标题为 `2026-11-01 · zyp · 第 11 条 · 总第 31 条`�
 
 只在 `s` 成功保存后增加两个编号；丢弃、failure、aborted 不占号。历史无姓名的成功数据计入总量，不推测采集者。筛选时剔除或分段不会改变采集编号，也不会为同一原始数据重复计数。姓名、录制开始日期、个人号、总号保存在 H5 元数据、保存事件与筛选标题中；不会改变机器人配置 hash 或 session 划分。
 
-计数账本位于本项目 `data/raw/.collection_counts.sqlite3`，mock 使用独立账本。备份数据时一并保留它；已经分配的号码不会因事后删除源文件而重用。原始文件名仍使用唯一 episode ID，显示标题由元数据生成。每个数据根目录独立累计，切换机器或项目副本时需一起迁移数据和账本。
+计数账本位于本项目 `data/raw/.collection_counts.sqlite3`，mock 使用独立账本。备份数据时一并保留它；已经分配的号码不会因事后删除源文件而重用。同一根目录内更换任务短名不重置个人号或总号。若目标文件名已存在，保存会拒绝覆盖。每个数据根目录独立累计，切换机器或项目副本时需一起迁移数据和账本。
 
 | 按键 | 行为 |
 |---|---|
@@ -96,7 +104,7 @@ zyp 晚上第一条标题为 `2026-11-01 · zyp · 第 11 条 · 总第 31 条`�
 
 每段处理完后按 `r` 继续。`scripts/collect_one.sh` 是同一连续流程的兼容入口。
 
-文件写到 `data/raw/collection_<时间>/episode_*.h5`，不会直接平铺在 `data/raw/`。检查及日志写到 `reports/collection/<session>/`。成功标签来自操作者；应同时检查图像、时间完整性和任务结果。
+文件写到 `data/raw/collection_<时间>/*.h5`，不会直接平铺在 `data/raw/`。检查及日志写到 `reports/collection/<session>/`。成功标签来自操作者；应同时检查图像、时间完整性和任务结果。
 
 纯遥操作：`./scripts/try_latency.sh responsive --execute --teleop-only`，保留旧的遥操作按键，不启用相机或录制。
 

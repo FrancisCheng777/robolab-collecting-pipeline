@@ -2,7 +2,7 @@
 
 ## 找到的原工具
 
-截图对应 4090 上 `/home/heinrich/roboLab/scripts/review_h5.py`，界面和服务位于 `scripts/lerobot_tools/`。它原本读取 `recording_*.h5` 中的 Kinect、RealSense、Franka state/command 四路独立数据，导出 8 维绝对目标。这与本项目的 `episode_*.h5`、`images/wrist` 和相邻实测状态动作定义不同。
+截图对应 4090 上 `/home/heinrich/roboLab/scripts/review_h5.py`，界面和服务位于 `scripts/lerobot_tools/`。它原本读取 `recording_*.h5` 中的 Kinect、RealSense、Franka state/command 四路独立数据，导出 8 维绝对目标。这与本项目的 H5、`images/wrist` 和相邻实测状态动作定义不同。筛选器兼容旧 `episode_*.h5` 及新文件名，例如 `rlt_1031_zyp_11_total31.h5`；可以搜索采集者姓名，标题末尾保留总编号。
 
 适配版位于本仓库 `pi05_demo/curation/`，复用其界面、方案保存和版本冲突检查；用本项目数据适配器及原生 H5 分段导出替换旧读取/导出逻辑。原工具未修改。来源说明见 `THIRD_PARTY_NOTICES.md`。
 

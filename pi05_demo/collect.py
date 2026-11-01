@@ -105,10 +105,11 @@ def main():
     output = args.output or str(ROOT / "data" / ("mock_raw" if args.mock else "raw"))
     collector = None
     if not args.teleop_only:
-        from .collector import Registry, prompt_identity
+        from .collector import Registry, prompt_identity, normalize_name
         if args.collector_file:
             identity = json.loads(Path(args.collector_file).read_text())
             collector = Registry(identity['counter_root'], mock=args.mock, refresh=True).preview(identity['name'])
+            collector['task_id'] = normalize_name(identity.get('task_id', 'rlt'))
         elif args.execute:
             collector = prompt_identity(ROOT / 'data/raw')
     bridge = cameras = session = writer = terminal = guide = None

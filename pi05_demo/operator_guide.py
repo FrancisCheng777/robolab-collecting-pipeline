@@ -81,7 +81,7 @@ class OperatorGuide:
             return
         if event == 'saved' and data.get('collection_total_index'):
             self.collector = dict(name=data['collector_name'], saved_personal=data['collector_index'],
-                                  saved_total=data['collection_total_index'])
+                                  saved_total=data['collection_total_index'], task_id=data.get('collection_task_id', 'rlt'))
         if event == 'recording' and data.get('teleop_only'):
             print('\n正在遥操作：相机关闭、不录数据。Enter 停止并结束本轮；q 退出。', flush=True)
             return

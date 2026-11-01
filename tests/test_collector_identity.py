@@ -14,9 +14,10 @@ import test_episode
 
 
 class CollectorIdentityTests(unittest.TestCase):
-    def save(self, root, name, outcome='success'):
+    def save(self, root, name, outcome='success', task_id='rlt'):
         writer = EpisodeWriter(Path(root)/'raw'/'session', mock=True, task='test',
-            session='session', config={}, collector={'name': name, 'counter_root': str(Path(root)/'raw')})
+            session='session', config={}, collector={'name': name, 'task_id': task_id,
+                'counter_root': str(Path(root)/'raw')})
         writer.append(**test_episode.EpisodeTests().sample())
         return writer.finish(outcome)
 
@@ -30,6 +31,30 @@ class CollectorIdentityTests(unittest.TestCase):
                     self.assertEqual(f.attrs['collector_index'], 11+i)
                     self.assertEqual(f.attrs['collection_total_index'], 31+i)
                     self.assertTrue(f.attrs['display_title'].endswith(f'总第 {31+i} 条'))
+                    mmdd = f.attrs['collection_date'].replace('-', '')[4:]
+                    self.assertEqual(path.name, f'rlt_{mmdd}_zyp_{11+i}_total{31+i}.h5')
+
+    def test_task_prefix_and_automatic_october_date_are_in_actual_filename(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as root, patch('pi05_demo.collector.collection_date', return_value='2026-10-31'):
+            path = self.save(root, 'zyp', task_id='plug')
+            self.assertEqual(path.name, 'plug_1031_zyp_1_total1.h5')
+            from pi05_demo.collector import Registry
+            reloaded = Registry(Path(root)/'raw', mock=True, refresh=True).preview('zyp')
+            self.assertEqual((reloaded['saved_personal'], reloaded['saved_total']), (1, 1))
+
+    def test_named_file_never_overwrites_existing_data(self):
+        from unittest.mock import patch
+        from pi05_demo.collector import Registry
+        with tempfile.TemporaryDirectory() as root, patch('pi05_demo.collector.collection_date', return_value='2026-10-31'):
+            writer = EpisodeWriter(root, mock=True, task='test', session='session', config={},
+                collector={'name': 'zyp', 'task_id': 'rlt', 'counter_root': root})
+            writer.append(**test_episode.EpisodeTests().sample())
+            target = Path(root)/'rlt_1031_zyp_1_total1.h5'
+            target.write_bytes(b'existing data')
+            with self.assertRaises(FileExistsError): writer.finish('success')
+            self.assertEqual(target.read_bytes(), b'existing data')
+            self.assertEqual(Registry(root, mock=True).preview('zyp')['saved_total'], 0)
 
     def test_failed_trials_do_not_count_and_identity_does_not_change_config_hash(self):
         with tempfile.TemporaryDirectory() as root:

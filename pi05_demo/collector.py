@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 
 import h5py
 
-METADATA_FIELDS = ('collector_name', 'collection_date', 'collector_index',
+METADATA_FIELDS = ('collector_name', 'collection_date', 'collection_task_id', 'collection_filename', 'collector_index',
                    'collection_total_index', 'display_title')
 
 
@@ -27,6 +27,11 @@ def normalize_name(value):
 
 def title(name, day, personal, total):
     return f'{day} · {name} · 第 {personal} 条 · 总第 {total} 条'
+
+
+def success_filename(task_id, day, name, personal, total):
+    mmdd = datetime.strptime(day, '%Y-%m-%d').strftime('%m%d')
+    return f'{normalize_name(task_id)}_{mmdd}_{normalize_name(name)}_{personal}_total{total}.h5'
 
 
 class Registry:
@@ -80,7 +85,7 @@ class Registry:
             personal, total = self.counts(db, name)
         return {'name': name, 'counter_root': str(self.root), 'saved_personal': personal, 'saved_total': total}
 
-    def save_success(self, source, name, day, publish):
+    def save_success(self, source, name, day, publish, *, task_id=None):
         """Serialize numbering and H5 publication, outside the control thread.
 
         If publication raises, the DB transaction rolls back. If the process
@@ -93,14 +98,22 @@ class Registry:
             personal, total = self.counts(db, name)
             metadata = dict(collector_name=name, collection_date=day, collector_index=personal+1,
                             collection_total_index=total+1, display_title=title(name, day, personal+1, total+1))
+            if task_id is not None:
+                task_id = normalize_name(task_id)
+                filename = success_filename(task_id, day, name, personal+1, total+1)
+                source = Path(source).with_name(filename)
+                metadata.update(collection_task_id=task_id, collection_filename=filename,
+                                display_title=task_id+' · '+metadata['display_title'])
             db.execute('INSERT INTO episodes VALUES (?,?,?,?,?)',
                        (str(Path(source).resolve()), name, personal+1, total+1, day))
             publish(metadata)
         return metadata
 
 
-def prompt_identity(root, *, mock=False, read=input):
+def prompt_identity(root, *, task_id='rlt', mock=False, read=input):
+    task_id = normalize_name(task_id)
     registry = Registry(root, mock=mock, refresh=True)
+    print(f'本次任务短名：{task_id}', flush=True)
     while True:
         raw = read('请输入采集者姓名（例如 zyp；输入 q 退出）：')
         if raw.strip().casefold() == 'q': raise SystemExit(130)
@@ -109,9 +122,11 @@ def prompt_identity(root, *, mock=False, read=input):
             print(exc, flush=True)
             continue
         info = registry.preview(name)
+        info['task_id'] = task_id
         print(f"采集日期：{collection_date()}（自动）\n"
               f"{name} 已保存 {info['saved_personal']} 条；累计总量 {info['saved_total']} 条。\n"
-              f"下一条：{title(name, collection_date(), info['saved_personal']+1, info['saved_total']+1)}", flush=True)
+              f"下一条：{title(name, collection_date(), info['saved_personal']+1, info['saved_total']+1)}\n"
+              f"文件名：{success_filename(task_id, collection_date(), name, info['saved_personal']+1, info['saved_total']+1)}", flush=True)
         return info
 
 
@@ -119,8 +134,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', required=True)
     parser.add_argument('--identity', required=True)
+    parser.add_argument('--task-id', default='rlt', help='Filename task prefix for this session')
     args = parser.parse_args()
-    info = prompt_identity(args.root)
+    info = prompt_identity(args.root, task_id=args.task_id)
     Path(args.identity).write_text(json.dumps(info, ensure_ascii=False, indent=2)+'\n')
 
 
