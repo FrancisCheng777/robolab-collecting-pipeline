@@ -11,6 +11,7 @@ class AsyncEpisodeWriter:
         if capacity < 1:
             raise ValueError('recording queue capacity must be positive')
         self.robolab = kwargs['config'].get('teleop_controller') == 'robolab_torque'
+        self.collection_metadata = {}
         self.count = 0
         self.high_watermark = 0
         self._queue = Queue(maxsize=capacity)
@@ -29,7 +30,9 @@ class AsyncEpisodeWriter:
                     values = self._queue.get_nowait()
                 except Empty:
                     if self._finish is not None:
-                        self._path = writer.finish(*self._finish)
+                        path = writer.finish(*self._finish)
+                        self.collection_metadata = getattr(writer, "collection_metadata", {})
+                        self._path = path
                         return
                     self._wake.wait(.01)
                     self._wake.clear()

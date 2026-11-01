@@ -25,6 +25,13 @@ mkdir -p "$TRIAL_RUN" "$TRIAL_DATA"
 printf '%s\n' "$TRIAL_RUN" > "${PI05_TRIAL_RUN_ROOT:-$TRIAL_CONFIG_DIR}/latest_run.txt"
 export PYTHONUNBUFFERED=1
 exec > >(tee -a "$TRIAL_RUN/collection.log") 2>&1
+TRIAL_IDENTITY_ARGS=()
+if [[ "${PI05_TELEOP_ONLY:-0}" != 1 ]]; then
+  .venv/bin/python -m pi05_demo.collector --root "$TRIAL_ROOT/data/raw" --identity "$TRIAL_RUN/collector.json"
+  # q exits the identity prompt without ever reaching device startup.
+  [[ -f "$TRIAL_RUN/collector.json" ]] || exit 0
+  TRIAL_IDENTITY_ARGS=(--collector-file "$TRIAL_RUN/collector.json")
+fi
 if [[ "$TRIAL_CONTINUOUS" == 1 ]]; then
   printf '%s\n' 'RoboLab D405 单相机连续采集：不设录制时长和条数上限，由按键结束。' \
     '启动 Enter：检测通信并回位、开爪；以后每条按 r 开始录制。' \
@@ -150,7 +157,7 @@ TRIAL_HOME_ARGS=()
 if [[ "${PI05_TELEOP_ONLY:-0}" != 1 ]]; then TRIAL_HOME_ARGS+=(--home-on-start --episode-keys resdq); fi
 set +e
 taskset -c "${PI05_TRIAL_COLLECTION_CPUS:-0-11,13-19}" ./scripts/collect.sh --execute --config "$TRIAL_COLLECTION_CONFIG" \
-  --session "$TRIAL_SESSION" --output "$TRIAL_DATA" --guide "${TRIAL_HOME_ARGS[@]}" "${TRIAL_EPISODE_ARGS[@]}" \
+  --session "$TRIAL_SESSION" --output "$TRIAL_DATA" --guide "${TRIAL_IDENTITY_ARGS[@]}" "${TRIAL_HOME_ARGS[@]}" "${TRIAL_EPISODE_ARGS[@]}" \
   --event-log "$TRIAL_RUN/events.jsonl"
 TRIAL_RESULT=$?
 set -e

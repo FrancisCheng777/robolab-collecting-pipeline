@@ -134,7 +134,7 @@ def record_frame(bridge, cameras, leader, writer, *, critical=False,
 
 class CollectionSession:
     def __init__(self, bridge, cameras, leader, config, output, session, *, mock,
-                 announce=None, auto_home=False):
+                 announce=None, auto_home=False, collector=None):
         state = bridge.state()
         if state.get("session_control_version") != 1:
             raise ValueError("rebuild the bridge: F2 session control is unavailable")
@@ -142,6 +142,7 @@ class CollectionSession:
         self.bridge, self.cameras, self.leader = bridge, cameras, leader
         self.config, self.output, self.session = config, output, session
         self.mock = mock
+        self.collector = collector
         self.recording_enabled = config.get('recording_enabled', True)
         self.review_keys = self.recording_enabled and config.get('episode_keys') == 'resdq'
         self.home_destination = 'standby'
@@ -260,11 +261,12 @@ class CollectionSession:
         if self.discard_requested:
             from pathlib import Path
             Path(path).unlink()  # Explicit d discards only this finalized episode.
+        collection_metadata = getattr(self.writer, "collection_metadata", {})
         self.writer = None
         self.completed_episodes += 1
         self.phase = "standby"
         self.pending_outcome = None
-        self.announce("discarded" if self.discard_requested else "saved", episode=str(path), outcome=outcome, frames=count)
+        self.announce("discarded" if self.discard_requested else "saved", episode=str(path), outcome=outcome, frames=count, **collection_metadata)
         self.discard_requested = False
         if not self.closed:
             self.announce("standby", episode_keys="resdq" if self.review_keys else "legacy", message="r starts the next trial." if self.review_keys else "F2/Enter starts the next trial.")
@@ -439,7 +441,7 @@ class CollectionSession:
                 self.control_intervals = []
                 if self.recording_enabled:
                     self.writer = writer_type(self.output, mock=self.mock, task=self.config["task"],
-                        session=self.session, config={**{k:v for k,v in self.config.items() if k != "episode_keys"},
+                        session=self.session, collector=self.collector, config={**{k:v for k,v in self.config.items() if k != "episode_keys"},
                                 "bridge_calibration": state["calibration"]})
                 else:
                     self.writer = TeleopCounter()

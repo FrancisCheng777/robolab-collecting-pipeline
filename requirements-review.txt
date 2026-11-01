@@ -1,0 +1,4 @@
+# Offline editor only; independent of camera/control and LeRobot dependencies.
+-e .
+fastapi>=0.115,<1
+uvicorn>=0.30,<1

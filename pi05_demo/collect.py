@@ -73,6 +73,7 @@ def main():
     parser.add_argument("--home-on-start", action="store_true",
                         help="home after device checks; launcher must obtain startup confirmation first")
     parser.add_argument("--frames", type=int, default=0, help="noninteractive mock length")
+    parser.add_argument("--collector-file", help="identity JSON prepared before startup confirmation")
     parser.add_argument("--session", required=True, help="physical collection session; train/val split unit")
     parser.add_argument("--mock-outcome", choices=["success", "failure"], default="success")
     args = parser.parse_args()
@@ -102,6 +103,14 @@ def main():
     if args.mock and not interactive and args.frames < 1:
         parser.error("--mock requires --frames > 0 or --interactive")
     output = args.output or str(ROOT / "data" / ("mock_raw" if args.mock else "raw"))
+    collector = None
+    if not args.teleop_only:
+        from .collector import Registry, prompt_identity
+        if args.collector_file:
+            identity = json.loads(Path(args.collector_file).read_text())
+            collector = Registry(identity['counter_root'], mock=args.mock, refresh=True).preview(identity['name'])
+        elif args.execute:
+            collector = prompt_identity(ROOT / 'data/raw')
     bridge = cameras = session = writer = terminal = guide = None
     error = None
     outcome, reason = "aborted", ""
@@ -133,9 +142,10 @@ def main():
                 from .operator_guide import OperatorGuide
                 guide = OperatorGuide(args.event_log)
                 guide('teleop_runtime', **runtime_settings)
+                if collector: guide('collector', **collector)
             session = CollectionSession(bridge, cameras, leader, config, output,
                                         args.session, mock=args.mock, announce=guide,
-                                        auto_home=args.home_on_start)
+                                        auto_home=args.home_on_start, collector=collector)
             terminal = termios.tcgetattr(sys.stdin)
             if args.home_on_start:
                 # Discard keys typed during device startup, never queue recording.
@@ -161,7 +171,7 @@ def main():
             state = bridge.state()
             bridge.claim()
             writer = EpisodeWriter(output, mock=True, task=config["task"], session=args.session,
-                                   config={**config, "bridge_calibration": state["calibration"]})
+                                   config={**config, "bridge_calibration": state["calibration"]}, collector=collector)
             deadline = time.monotonic()
             while writer.count < args.frames:
                 record_frame(bridge, cameras, leader, writer)

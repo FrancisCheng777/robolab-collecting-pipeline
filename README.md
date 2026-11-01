@@ -69,6 +69,22 @@ export FRANKA_ECHO=/path/to/libfranka/build/examples/echo_robot_state
 ./scripts/collect_session.sh
 ```
 
+首次启动确认 Enter **之前**会先询问采集者姓名，例如 `zyp`。日期自动按 Asia/Taipei 填入，无需输入；看到姓名、已保存数量和下一条编号后，再按原来的 Enter 检测设备并回位。输入姓名时键入 `q` 可退出，纯遥操作及 `--inspect` 不询问姓名。
+
+个人编号和总编号都跨 session、跨天累计，日期单独显示。示例：
+
+| 本次采集 | 个人编号 | 总编号（标题最后） |
+|---|---|---|
+| zyp 先保存 10 条 | 1–10 | 1–10 |
+| xxx 接着保存 20 条 | 1–20 | 11–30 |
+| zyp 晚上再保存 30 条 | 11–40 | 31–60 |
+
+zyp 晚上第一条标题为 `2026-11-01 · zyp · 第 11 条 · 总第 31 条`。第二天回来仍续号。姓名去掉两端空白、统一大小写，因此 `ZYP` 和 `zyp` 算同一人；换人时退出后重新启动并输入新姓名。
+
+只在 `s` 成功保存后增加两个编号；丢弃、failure、aborted 不占号。历史无姓名的成功数据计入总量，不推测采集者。筛选时剔除或分段不会改变采集编号，也不会为同一原始数据重复计数。姓名、录制开始日期、个人号、总号保存在 H5 元数据、保存事件与筛选标题中；不会改变机器人配置 hash 或 session 划分。
+
+计数账本位于本项目 `data/raw/.collection_counts.sqlite3`，mock 使用独立账本。备份数据时一并保留它；已经分配的号码不会因事后删除源文件而重用。原始文件名仍使用唯一 episode ID，显示标题由元数据生成。每个数据根目录独立累计，切换机器或项目副本时需一起迁移数据和账本。
+
 | 按键 | 行为 |
 |---|---|
 | 启动后的 Enter | 检查设备，自动回默认位置并开爪；进入待机 |
@@ -83,6 +99,33 @@ export FRANKA_ECHO=/path/to/libfranka/build/examples/echo_robot_state
 文件写到 `data/raw/collection_<时间>/episode_*.h5`，不会直接平铺在 `data/raw/`。检查及日志写到 `reports/collection/<session>/`。成功标签来自操作者；应同时检查图像、时间完整性和任务结果。
 
 纯遥操作：`./scripts/try_latency.sh responsive --execute --teleop-only`，保留旧的遥操作按键，不启用相机或录制。
+
+## 浏览器筛选与裁剪
+
+沿用实验室 `roboLab/scripts/review_h5.py` 的工作台界面，适配本仓库 H5。按文件中的实际相机清单显示：单 D405 只有腕部画面；历史双相机记录显示两路。支持播放倍速、逐帧、搜索、区间剔除、整条剔除/恢复、撤销和保存方案。原始 H5 只读。
+
+```bash
+python3 -m venv .venv-review
+.venv-review/bin/pip install -r requirements-review.txt
+./scripts/review.sh --input data/raw
+```
+
+打开 <http://127.0.0.1:8767>。递归扫描 session 子目录，跳过 `.inprogress`；新增录制后重启工作台以重新扫描。`--input` 可指定一个 session，`--clips` 指定方案 JSON，`--output` 指定筛选 H5 输出位置。不同数据根目录应使用各自的方案与输出位置。`REVIEW_PYTHON=/path/to/python` 可复用已有离线环境。
+
+1. 暂停并设置 Start/End，点击“添加删除区间”。首尾帧都剔除；原始时间轴仍完整可看。
+2. “保存方案”只保存 JSON；“导出筛选 H5”才生成连续保留片段。每段为独立 H5，保留 session、成功标签、mock 标记、全部相机与时间戳；不会跨剔除区间拼接动作。
+3. 仅成功录制可导出；过短片段跳过并报告，时序/动作验证失败不会覆盖上一版。界面显示实测关节角和夹爪指令开口（米），不是旧工具的绝对动作或归一化训练动作。
+4. 输出默认位于 `outputs/review/selected`，每次成功后原子切换到新版本。旧版本保留于 `.selected.versions/`；输入文件不改写、不删除。之后运行下方原有 LeRobot exporter。
+
+```bash
+# 单 session 验证：仅检查转换链路
+./scripts/export.sh --input outputs/review/selected --output outputs/review_checkout --checkout
+# 正式训练：在筛选结果中保留独立验证 session
+./scripts/export.sh --input outputs/review/selected --output outputs/dataset_v1 \
+  --validation-session collection_<验证集时间>
+```
+
+工作台仅监听本机。远程使用可执行 `ssh -N -L 8767:127.0.0.1:8767 4090-v6`，再打开本机同一网址。完整说明与 4090 上的已验证启动方式见 [docs/data_review.md](docs/data_review.md)。旧的只读查看器 `pi05-demo-review` 仍可使用。
 
 ## LeRobot 导出
 

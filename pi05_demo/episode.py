@@ -13,7 +13,14 @@ from .vision import camera_views, episode_views
 
 SCHEMA="pi05_plug_demo/1"
 class EpisodeWriter:
-    def __init__(self,root,*,mock,task,session,config):
+    def __init__(self,root,*,mock,task,session,config,collector=None):
+        self.collector = collector
+        self.collection_metadata = {}
+        if collector:
+            from .collector import Registry, normalize_name, collection_date
+            self.collector = {**collector, 'name': normalize_name(collector['name'])}
+            self.registry = Registry(collector['counter_root'], mock=mock)
+            self.collection_metadata = dict(collector_name=self.collector['name'], collection_date=collection_date())
         self.views=camera_views(config.get("cameras"))
         root=Path(root);root.mkdir(parents=True,exist_ok=True)
         self.final=root/f"episode_{time.time_ns()}_{uuid.uuid4().hex[:8]}.h5"
@@ -25,6 +32,7 @@ class EpisodeWriter:
             timestamp_clock="host_monotonic_seconds",camera_timestamp_kind="host_receive_time",
             timing_version=1,exposure_alignment_verified=False,
             success=-1,complete=False)
+        self.f.attrs.update(self.collection_metadata)
         self.robolab = config.get("teleop_controller") == "robolab_torque"
         if self.robolab:
             self.f.attrs.update(schema="pi05_plug_demo/2",action_source="next_observed_joint_state",
@@ -102,8 +110,15 @@ class EpisodeWriter:
         self.f.attrs.update(outcome=outcome,success=int(outcome=="success"),
             outcome_source="synthetic" if self.f.attrs["mock"] else "operator",
             reason=reason,complete=True,frames=self.count)
-        self.f.flush();self.f.close()
-        os.replace(self.partial,self.final)
+        def publish(metadata):
+            self.f.attrs.update(metadata)
+            self.f.flush();self.f.close()
+            os.replace(self.partial,self.final)
+        if outcome == 'success' and self.collector:
+            self.collection_metadata = self.registry.save_success(self.final, self.collector['name'],
+                self.collection_metadata['collection_date'], publish)
+        else:
+            publish(self.collection_metadata)
         return self.final
     def close_incomplete(self):
         if self.f.id.valid:self.f.close()

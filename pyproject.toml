@@ -13,7 +13,11 @@ dependencies = ["numpy>=1.24", "h5py>=3.8", "Pillow>=9"]
 pi05-demo-collect = "pi05_demo.collect:main"
 pi05-demo-export = "pi05_demo.export:main"
 pi05-demo-review = "pi05_demo.review:main"
+pi05-demo-curate = "pi05_demo.curation.__main__:main"
 pi05-demo-preflight = "pi05_demo.preflight:main"
 
 [tool.setuptools.packages.find]
 include = ["pi05_demo*"]
+
+[tool.setuptools.package-data]
+"pi05_demo.curation" = ["static/*.html", "static/*.js", "static/*.css"]

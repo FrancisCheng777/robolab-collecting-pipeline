@@ -66,6 +66,7 @@ def format_alignment(data):
 class OperatorGuide:
     def __init__(self, event_log=None):
         self.log = None
+        self.collector = None
         if event_log:
             path = Path(event_log)
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -75,6 +76,12 @@ class OperatorGuide:
         if self.log:
             self.log.write(json.dumps({"event": event, **data}, ensure_ascii=False) + "\n")
             self.log.flush()
+        if event == 'collector':
+            self.collector = data
+            return
+        if event == 'saved' and data.get('collection_total_index'):
+            self.collector = dict(name=data['collector_name'], saved_personal=data['collector_index'],
+                                  saved_total=data['collection_total_index'])
         if event == 'recording' and data.get('teleop_only'):
             print('\n正在遥操作：相机关闭、不录数据。Enter 停止并结束本轮；q 退出。', flush=True)
             return
@@ -89,7 +96,12 @@ class OperatorGuide:
         if event == "alignment":
             large_difference = data.get("robolab") and any(abs(x)>45 for x in (data.get("joint_error_degrees") or []))
             color = "\033[32m" if data.get("ready") and not large_difference else "\033[33m"
-            print("\033[2J\033[H" + color + format_alignment(data) + "\033[0m", flush=True)
+            header = ''
+            if self.collector:
+                from .collector import collection_date, title
+                header = '下一条：' + title(self.collector['name'], collection_date(),
+                    self.collector['saved_personal']+1, self.collector['saved_total']+1) + '\n'
+            print("\033[2J\033[H" + header + color + format_alignment(data) + "\033[0m", flush=True)
             return
         messages = {
             "init": ("设备准备完成，等待停止确认后自动回位并开爪；无需再按 Enter，尚未录制。q 可退出。"
@@ -115,6 +127,8 @@ class OperatorGuide:
             message = f"已保存 {data['frames']} 帧，标记 {data['outcome']}：\n{data['episode']}"
         else:
             message = messages.get(event, f"{event}: {data}")
+        if data.get('display_title'):
+            message = data['display_title'] + '\n' + message
         print("\n" + message, flush=True)
 
     def close(self):
