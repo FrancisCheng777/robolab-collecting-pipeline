@@ -1,0 +1,44 @@
+{
+  "source_date": "2026-11-07",
+  "base_commit": "ff8d0c428b436413d22a69a3bd073dcff1c08ecd",
+  "status": "archived, not promoted or newly validated",
+  "description": "Exact local source overlay; some source directories are partial snapshots. Historical results are not fresh validation. Data, weights, generated binaries and caches are excluded. Apply overlay only after comparing with its original deployed base.",
+  "files": [
+    {
+      "path": "experiments/real_replay_20261105/real_replay.md",
+      "source": "experiments/real_replay_20261105/real_replay.md",
+      "sha256": "bd02df520a79d8e6e7e4b0cb60acde7f5d717fafe427d99ed9f2ef607afbee9b",
+      "bytes": 2463
+    },
+    {
+      "path": "experiments/real_replay_20261105/replay.py",
+      "source": "experiments/real_replay_20261105/replay.py",
+      "sha256": "7f114dd042039b64fab3f5edce8bf7ad1b15d439f073c01ddcdbda3c169b5d2f",
+      "bytes": 12662
+    },
+    {
+      "path": "experiments/real_replay_20261105/replay_menu.py",
+      "source": "experiments/real_replay_20261105/replay_menu.py",
+      "sha256": "dc67ff318cdb9ceeaa97eef7089848e579af0edc7477ed3a054ba4fef05a295f",
+      "bytes": 4369
+    },
+    {
+      "path": "experiments/real_replay_20261105/replay_session.sh",
+      "source": "experiments/real_replay_20261105/replay_session.sh",
+      "sha256": "f8e634020fa767c1d8b802a39207ad470fa7b90bab7281a5698f9b96c8aa3fe4",
+      "bytes": 301
+    },
+    {
+      "path": "experiments/real_replay_20261105/test_replay_existing.py",
+      "source": "experiments/real_replay_20261105/test_replay_existing.py",
+      "sha256": "a1b39ac7f2a0db5a84406fcd1583f15d699afd944f8706bc60bc57698fc61aed",
+      "bytes": 1882
+    },
+    {
+      "path": "experiments/real_replay_20261105/test_replay_menu.py",
+      "source": "experiments/real_replay_20261105/test_replay_menu.py",
+      "sha256": "39611fa3f60d5779250fdb236d5ccfb7db3ca3711eba251f10375a41fd55d51c",
+      "bytes": 2797
+    }
+  ]
+}
