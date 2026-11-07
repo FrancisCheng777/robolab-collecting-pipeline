@@ -110,6 +110,7 @@ class OperatorGuide:
                        if data.get("open_gripper") else "正在回初始位；夹爪保持当前开度。q 可退出。"),
             "opening_gripper": "机械臂已到位，正在自动张开夹爪；请等待完成。q 退出，a 取消。",
             "settling": "正在减速并保持，请等待。",
+            "resume_wait": "机械臂或夹爪尚未持续停稳，正在重新确认后自动继续；不录制，q 可退出。",
             "standby": "待机：检查 GELLO 方向与周围空间；显示“可以开始”后按 Enter。",
             "recording": "正在跟随并录制！按 Enter 停止；或直接按 s/f/a 停止并标记。",
             "label": "已停止跟随。请按 s=任务成功 / f=任务失败 / a=仅试动或放弃。",
