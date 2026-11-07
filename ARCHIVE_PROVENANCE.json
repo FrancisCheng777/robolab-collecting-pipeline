@@ -1,0 +1,68 @@
+{
+  "source_date": "2026-11-07",
+  "base_commit": "ff8d0c428b436413d22a69a3bd073dcff1c08ecd",
+  "status": "archived, not promoted or newly validated",
+  "description": "Exact local source overlay; some source directories are partial snapshots. Historical results are not fresh validation. Data, weights, generated binaries and caches are excluded. Apply overlay only after comparing with its original deployed base.",
+  "files": [
+    {
+      "path": "experiments/replay153_bundle_20261105/README.md",
+      "source": "experiments/replay153_bundle_20261105/README.md",
+      "sha256": "4f6723a21634ba5844303a733246d412fa15aa2f7b204dc1b1f4b9842798b2c4",
+      "bytes": 4520
+    },
+    {
+      "path": "experiments/replay153_bundle_20261105/build_bundle.py",
+      "source": "experiments/replay153_bundle_20261105/build_bundle.py",
+      "sha256": "784cac42883c3f688027839a9c7597fcee27bf63658d6b97f5785666cf51a14d",
+      "bytes": 7072
+    },
+    {
+      "path": "experiments/replay153_bundle_20261105/portable_host.py",
+      "source": "experiments/replay153_bundle_20261105/portable_host.py",
+      "sha256": "a0188e3523e445016f555c2c88e4a0a392d7c2c514a191b35010ac080e1f1f15",
+      "bytes": 3845
+    },
+    {
+      "path": "experiments/replay153_bundle_20261105/prepare_station.py",
+      "source": "experiments/replay153_bundle_20261105/prepare_station.py",
+      "sha256": "c5095b62fe623093f6ace9760f6c3a70d61aba926257b0ea33694f6018f97d87",
+      "bytes": 3591
+    },
+    {
+      "path": "experiments/replay153_bundle_20261105/prepare_station.sh",
+      "source": "experiments/replay153_bundle_20261105/prepare_station.sh",
+      "sha256": "abeb40116bf0ab6550db03b98d87cdd79bf67aa8d2306bf26dcefb141a47d635",
+      "bytes": 180
+    },
+    {
+      "path": "experiments/replay153_bundle_20261105/rebuild_native.sh",
+      "source": "experiments/replay153_bundle_20261105/rebuild_native.sh",
+      "sha256": "6018bb0e7be0150522a8ca9c4f4a6cdd9c4712b7b91ebe6e0c11c75fa96397f0",
+      "bytes": 1327
+    },
+    {
+      "path": "experiments/replay153_bundle_20261105/run_replay.sh",
+      "source": "experiments/replay153_bundle_20261105/run_replay.sh",
+      "sha256": "61d8afbb5be81ae66f077c8e44806169b9f19efa2bb3bf9d2880c7c60cee9bfc",
+      "bytes": 1137
+    },
+    {
+      "path": "experiments/replay153_bundle_20261105/setup.sh",
+      "source": "experiments/replay153_bundle_20261105/setup.sh",
+      "sha256": "2226a2742a4d59ecae8915d3de47e4f564eeaafd96e2897f749124b6fa01a297",
+      "bytes": 916
+    },
+    {
+      "path": "experiments/replay153_bundle_20261105/update_native_manifest.py",
+      "source": "experiments/replay153_bundle_20261105/update_native_manifest.py",
+      "sha256": "4b4448ff91d3979fc43ae5b78ac1cc812d623e5421b6f353c7c8db111526c7e2",
+      "bytes": 535
+    },
+    {
+      "path": "experiments/replay153_bundle_20261105/verify_bundle.py",
+      "source": "experiments/replay153_bundle_20261105/verify_bundle.py",
+      "sha256": "02f646b334697d1b530c6ed17b706d89168522efa5ff4a8b8bf800dd0bb68592",
+      "bytes": 975
+    }
+  ]
+}
