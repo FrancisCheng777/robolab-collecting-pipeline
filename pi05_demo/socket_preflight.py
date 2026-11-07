@@ -15,7 +15,11 @@ def clear_stale_socket(path):
         raise RuntimeError(f'Refusing to remove non-socket or foreign-owned path: {path}')
     # Includes sockets bound but not yet listening. Do not connect to a live
     # bridge: accepting a diagnostic connection could interfere with its client.
-    for line in Path('/proc/net/unix').read_text().splitlines()[1:]:
+    try:
+        registry = Path('/proc/net/unix').read_text()
+    except OSError as exc:
+        raise RuntimeError('Cannot verify socket ownership without readable /proc/net/unix; refusing cleanup') from exc
+    for line in registry.splitlines()[1:]:
         fields = line.split(maxsplit=7)
         if len(fields) == 8 and fields[7] == str(path):
             raise RuntimeError(f'Socket is still owned by a live process: {path}')

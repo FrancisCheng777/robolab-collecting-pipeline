@@ -118,7 +118,8 @@ class WristOnlyTests(unittest.TestCase):
         self.assertFalse(images['left_wrist_0_rgb'].any())
         self.assertFalse(images['right_wrist_0_rgb'].any())
 
-    @unittest.skipUnless(importlib.util.find_spec('lerobot.datasets'), 'official LeRobot environment required')
+    @unittest.skipUnless(importlib.util.find_spec('lerobot') and
+                         importlib.util.find_spec('lerobot.datasets'), 'official LeRobot environment required')
     def test_official_single_camera_export(self):
         from pi05_demo.export import export
         from lerobot.datasets.lerobot_dataset import LeRobotDataset

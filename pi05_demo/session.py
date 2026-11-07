@@ -9,6 +9,7 @@ import numpy as np
 
 from .contract import encode, validate_target, validate_frames, vector
 from .episode import EpisodeWriter
+from .transport import HoldNotReady
 
 
 class TeleopCounter:
@@ -180,6 +181,7 @@ class CollectionSession:
         self.after_hold = "standby"
         self.hold_sequence = 0
         self.settling_started = None
+        self.resume_deadline = None
         self.first_frame = False
         self.last_alignment_display = 0.
         self.last_home_report = 0.
@@ -206,6 +208,8 @@ class CollectionSession:
 
     def _settle(self, state, after, outcome=None):
         self.bridge.hold(state)
+        if after not in ("retry_home", "opening_gripper"):
+            self.resume_deadline = None
         self.hold_sequence = self.bridge.seq
         self.after_hold, self.pending_outcome = after, outcome
         self.settling_started = time.monotonic()
@@ -223,6 +227,20 @@ class CollectionSession:
         self.announce("homing", duration_s=self.home.duration,
                       open_gripper=bool(self.config.get("open_gripper_after_home", False)),
                       review_after_home=destination == "review")
+
+    def _resume_command(self, state, target, width, *, motion_profile, after_hold):
+        try:
+            self.bridge.command(state, target, width, motion_profile=motion_profile)
+        except HoldNotReady:
+            # A held snapshot is not a reservation: readiness can change before
+            # the bridge receives this command. Only this explicit pre-enqueue
+            # rejection is retryable; timeouts and other faults still propagate.
+            if self.resume_deadline is None:
+                self.resume_deadline = time.monotonic() + 10.
+                self.announce("resume_wait")
+            self._settle(state, after_hold)
+        else:
+            self.resume_deadline = None
 
     def _finish(self, outcome, reason="operator label"):
         if not self.recording_enabled:
@@ -279,6 +297,8 @@ class CollectionSession:
             self.close("operator exit")
             return False
         state = self.bridge.state()
+        if self.resume_deadline is not None and time.monotonic() >= self.resume_deadline:
+            raise RuntimeError("arm/gripper hold did not remain ready to resume within 10 s")
         if self.phase == "recording":
             ending = next((k for k in keys if k in (("e",) if self.review_keys else ("toggle", "s", "f", "a"))), None)
             if ending is not None:
@@ -348,9 +368,11 @@ class CollectionSession:
                                    f"(limit {tolerance:.5f}), max speed {max_speed:.5f} rad/s (limit 0.01)")
             if (now - self.home.started >= self.home.duration
                     and max_error <= tolerance and max_speed <= .01):
+                self.resume_deadline = None
                 self._settle(state, "opening_gripper" if self.config.get("open_gripper_after_home", False) else self.home_destination)
             else:
-                self.bridge.command(state, target, state["gripper_width"], motion_profile="home")
+                self._resume_command(state, target, state["gripper_width"],
+                                     motion_profile="home", after_hold="retry_home")
             return True
 
         if self.phase == "opening_gripper":
@@ -361,12 +383,14 @@ class CollectionSession:
                 raise RuntimeError("startup gripper failed to open within 10 s")
             width = state["calibration"]["gripper_max_width"]
             if abs(state["gripper_width"] - width) <= .005:
+                self.resume_deadline = None
                 self._settle(state, self.home_destination)
             else:
                 # Home mode deliberately freezes the gripper in the bridge.
                 # Use Track with the latched stationary arm pose to open it;
                 # this phase never reads a GELLO target or records an episode.
-                self.bridge.command(state, self.gripper_open_q, width, motion_profile="teleop")
+                self._resume_command(state, self.gripper_open_q, width,
+                                     motion_profile="teleop", after_hold="opening_gripper")
             return True
 
         # Keep watchdog and ownership active while held. No GELLO targets are
@@ -383,6 +407,11 @@ class CollectionSession:
                 self.phase = self.after_hold
                 if self.phase == "return_home":
                     self._start_home(state, "review")
+                    return True
+                if self.phase == "retry_home":
+                    # Replan from the newly confirmed pose/time; do not advance
+                    # through a trajectory while its first command is rejected.
+                    self._start_home(state, self.home_destination)
                     return True
                 if self.phase == "opening_gripper":
                     self.gripper_open_q = np.asarray(state["q"], dtype=float).copy()

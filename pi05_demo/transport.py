@@ -1,5 +1,9 @@
 import json,socket,time,uuid
 from .contract import CONTRACT_ID
+
+class HoldNotReady(RuntimeError):
+    """Explicit bridge rejection before enqueueing or consuming a sequence."""
+
 class Bridge:
     def __init__(self,path,*,mock):
         self.path=path;self.owner=uuid.uuid4().hex;self.seq=0;self.claimed=False
@@ -21,7 +25,11 @@ class Bridge:
                 buf+=chunk
                 if len(buf)>131072:raise RuntimeError("oversized bridge reply")
         reply=json.loads(buf.split(b"\n",1)[0])
-        if not reply.get("ok"):raise RuntimeError(reply.get("error","bridge rejected"))
+        if not reply.get("ok"):
+            error=reply.get("error","bridge rejected")
+            if error == "wait until arm and gripper are held before resuming":
+                raise HoldNotReady(error)
+            raise RuntimeError(error)
         return reply
     def state(self):
         st=self.request({"op":"state"})
@@ -38,13 +46,14 @@ class Bridge:
         self.request({"op":"claim","session":self.session,"controller_id":self.owner})
         self.claimed=True
     def _control(self,st,op,**values):
-        self.seq+=1
+        sequence=self.seq+1
         sent=time.monotonic()
         reply=self.request({"op":op,"session":self.session,"controller_id":self.owner,
-            "sequence":self.seq,"state_sequence":st["state_sequence"],
+            "sequence":sequence,"state_sequence":st["state_sequence"],
             **values})
         acknowledged=time.monotonic()
-        if reply.get("sequence")!=self.seq:raise RuntimeError("bridge command ACK sequence mismatch")
+        if reply.get("sequence")!=sequence:raise RuntimeError("bridge command ACK sequence mismatch")
+        self.seq=sequence
         reply["command_send_s"]=sent;reply["command_ack_s"]=acknowledged
         return reply
     def command(self,st,target,width,*,motion_profile="teleop"):
